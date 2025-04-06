@@ -7,6 +7,7 @@ import sentencepiece as spm
 import argparse
 import json
 
+
 def merge_tokenizer(
     llama_tokenizer_dir, chinese_sp_model_file, 
     output_hf_dir = "llm_tokenizer_hf"
@@ -64,6 +65,7 @@ def merge_tokenizer(
     tokenizer.save_pretrained(output_hf_dir)
     print(f"llm token num: {len(tokenizer)}")
     print(f"llm tokenizer has been saved to {output_hf_dir}")
+
 
 def test_tokenizer(hf_tokenizer_dir):
     llm_tokenizer = LlamaTokenizer.from_pretrained(hf_tokenizer_dir)
