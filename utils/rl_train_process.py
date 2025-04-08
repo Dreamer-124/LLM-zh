@@ -59,7 +59,7 @@ def merge_datasets(input_dir):
                     processed_line = json.dump(data_dict, ensure_ascii = False) + '\n'
                     total_lines.append(processed_line)
             
-            if file.endswith('.csv'):
+            if file.endswith('.tsv'):
                 # 获取当前文件的绝对路径
                 file_path = os.path.join(subdir, file)
                 print(file_path)
