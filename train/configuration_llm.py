@@ -28,7 +28,7 @@ class llmConfig(PretrainedConfig):
         bos_token_id = None,
         eos_token_id = None,
         tie_word_embeddings = False,
-        rope_theta = 10000.0
+        rope_theta = 10000.0,
         attention_dropout = 0.0,
         **kwargs
     ):

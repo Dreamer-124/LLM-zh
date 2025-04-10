@@ -17,29 +17,29 @@ new_tokenizer = AutoTokenizer.from_pretrained("tokenizer/llm_tokenizer_hf")
 print(len(new_tokenizer))
 print(model)
 """
-TinyllmForCausalLM(
-  (model): TinyllmModel(
+llmForCausalLM(
+  (model): llmModel(
     (embed_tokens): Embedding(64798, 512)
     (layers): ModuleList(
-      (0-7): 8 x TinyllmDecoderLayer(
-        (self_attn): TinyllmSdpaAttention(
+      (0-7): 8 x llmDecoderLayer(
+        (self_attn): llmSdpaAttention(
           (q_proj): Linear(in_features=512, out_features=512, bias=True)
           (k_proj): Linear(in_features=512, out_features=512, bias=True)
           (v_proj): Linear(in_features=512, out_features=512, bias=True)
           (o_proj): Linear(in_features=512, out_features=512, bias=False)
-          (rotary_emb): TinyllmRotaryEmbedding()
+          (rotary_emb): llmRotaryEmbedding()
         )
-        (mlp): TinyllmMLP(
+        (mlp): llmMLP(
           (gate_proj): Linear(in_features=512, out_features=1408, bias=False)
           (up_proj): Linear(in_features=512, out_features=1408, bias=False)
           (down_proj): Linear(in_features=1408, out_features=512, bias=False)
           (act_fn): SiLU()
         )
-        (input_layernorm): TinyllmRMSNorm()
-        (post_attention_layernorm): TinyllmRMSNorm()
+        (input_layernorm): llmRMSNorm()
+        (post_attention_layernorm): llmRMSNorm()
       )
     )
-    (norm): TinyllmRMSNorm()
+    (norm): llmRMSNorm()
   )
   (lm_head): Linear(in_features=512, out_features=64798, bias=False)
 )
@@ -51,29 +51,29 @@ model.config.vocab_size = 49958
 
 print(model)
 """
-TinyllmForCausalLM(
-  (model): TinyllmModel(
+llmForCausalLM(
+  (model): llmModel(
     (embed_tokens): Embedding(49958, 512)
     (layers): ModuleList(
-      (0-7): 8 x TinyllmDecoderLayer(
-        (self_attn): TinyllmSdpaAttention(
+      (0-7): 8 x llmDecoderLayer(
+        (self_attn): llmSdpaAttention(
           (q_proj): Linear(in_features=512, out_features=512, bias=True)
           (k_proj): Linear(in_features=512, out_features=512, bias=True)
           (v_proj): Linear(in_features=512, out_features=512, bias=True)
           (o_proj): Linear(in_features=512, out_features=512, bias=False)
-          (rotary_emb): TinyllmRotaryEmbedding()
+          (rotary_emb): llmRotaryEmbedding()
         )
-        (mlp): TinyllmMLP(
+        (mlp): llmMLP(
           (gate_proj): Linear(in_features=512, out_features=1408, bias=False)
           (up_proj): Linear(in_features=512, out_features=1408, bias=False)
           (down_proj): Linear(in_features=1408, out_features=512, bias=False)
           (act_fn): SiLU()
         )
-        (input_layernorm): TinyllmRMSNorm()
-        (post_attention_layernorm): TinyllmRMSNorm()
+        (input_layernorm): llmRMSNorm()
+        (post_attention_layernorm): llmRMSNorm()
       )
     )
-    (norm): TinyllmRMSNorm()
+    (norm): llmRMSNorm()
   )
   (lm_head): Linear(in_features=512, out_features=49958, bias=False)
 )

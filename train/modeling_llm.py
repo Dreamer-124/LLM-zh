@@ -25,8 +25,8 @@ from transformers.utils import logging
 from transformers.generation.utils import GenerationConfig
 from transformers.generation.logits_process import LogitsProcessorList
 
-from .configuration_llm import llmConfig
-from .generation_utils import (
+from configuration_llm import llmConfig
+from generation_utils import (
     TextIterStreamer, make_context, 
     OutputRepetitionPenaltyLogitsProcessor, parse_pot_no_stream
 )
@@ -77,7 +77,7 @@ class llmRMSNorm(nn.Module):
         """ llmRSMNorm """
         super().__init__()
         self.weight = nn.Parameter(torch.ones(hidden_size))
-        self.variance = eps
+        self.variance_epsilon = eps
     
     def forward(self, hidden_states):
         input_dtype = hidden_states.dtype
@@ -127,8 +127,8 @@ class llmRotaryEmbedding(nn.Module):
 
         # 不同于论文中的实现，这里采用了不同的排列方式以获得相同的计算结果
         emb = torch.cat((freqs, freqs), dim = -1)
-        self.register_buffer("cos_cached", emd.cos().to(dtype), persistent = False)
-        self.register_buffer("sin_cached", emd.sin().to(dtype), persistent = False)
+        self.register_buffer("cos_cached", emb.cos().to(dtype), persistent = False)
+        self.register_buffer("sin_cached", emb.sin().to(dtype), persistent = False)
     
     def forward(self, x, seq_len = None):
         # x: [bs, num_attention_heads, seq_len, head_size]
@@ -143,7 +143,7 @@ class llmRotaryEmbedding(nn.Module):
         )
 
 
-def rotate_half(x)；
+def rotate_half(x):
     """
     旋转输入一半的 hidden dim
     """
@@ -190,14 +190,14 @@ class llmMLP(nn.Module):
         self.config = config
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
-        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias = False)
-        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias = False)
-        self.down_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias = False)
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
-    
+
     def forward(self, x):
         intermediate = self.act_fn(self.gate_proj(x)) * self.up_proj(x)
-        down_proj = self.down_proj(intermediate)
+        down_proj = self.down_proj(intermediate) 
         return down_proj
     
 
@@ -361,7 +361,8 @@ class llmSdpaAttention(llmAttention):
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
         past_key_value: Optional[Cache] = None,
-        output_attentions: bool = False
+        output_attentions: bool = False,
+        use_cache: bool = False,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         # 当设置 output_attentions = True 时，由于 torch.nn.functional.scaled_dot_product_attention 不支持直接返回注意力权重
         # 因此暂时降级回用父类的手动实现方式，并发出警告提示用户未来版本的更改要求
@@ -409,7 +410,7 @@ class llmSdpaAttention(llmAttention):
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-         if attention_mask is not None:
+        if attention_mask is not None:
             if attention_mask.size() != (bsz, 1, q_len, kv_seq_len):
                 raise ValueError(
                     f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.size()}"
@@ -444,7 +445,7 @@ class llmSdpaAttention(llmAttention):
 
 LLM_ATTENTION_CLASSES = {
     "eager": llmAttention,
-    "sdqa": llmSdpaAttention
+    "sdpa": llmSdpaAttention
 }
 
 class llmDecoderLayer(nn.Module):
@@ -455,6 +456,7 @@ class llmDecoderLayer(nn.Module):
         self.self_attn = LLM_ATTENTION_CLASSES[config._attn_implementation](config, layer_idx)
         self.mlp = llmMLP(config)
         self.input_layernorm = llmRMSNorm(config.hidden_size, eps = config.rms_norm_eps)
+        self.post_attention_layernorm = llmRMSNorm(config.hidden_size, eps = config.rms_norm_eps)
 
     def forward(
         self,
@@ -463,6 +465,7 @@ class llmDecoderLayer(nn.Module):
         position_ids: Optional[torch.LongTensor] = None,
         past_key_value: Optional[Tuple[torch.Tensor]] = None,
         output_attentions: Optional[bool] = False,
+        use_cache: Optional[bool] = False,
         **kwargs
     ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
         """
@@ -524,8 +527,8 @@ class llmPreTrainedModel(PreTrainedModel):
             module.weight.data.normal_(mean = 0.0, std = std)
             if module.bias is not None:
                 module.bias.data.zero_()
-        else isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mena = 0.0, std = std)
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean = 0.0, std = std)
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx].zero_()
 
@@ -539,7 +542,7 @@ class llmModel(llmPreTrainedModel):
     def __init__(self, config: llmConfig):
         super().__init__(config)
         self.padding_idx = config.pad_token_id
-        self.vocab_size = vocab_size
+        self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.layers = nn.ModuleList(
@@ -563,7 +566,7 @@ class llmModel(llmPreTrainedModel):
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,  # 每个输入序列词元在位置嵌入中的位置索引
-        past_key_value: Optional[List[torch.FloatTensor]] = None,  # 可用于加速序列解码预先计算的隐藏状态 (自注意力块和交叉注意力块中的键和值)
+        past_key_values: Optional[List[torch.FloatTensor]] = None,  # 可用于加速序列解码预先计算的隐藏状态 (自注意力块和交叉注意力块中的键和值)
         inputs_embeds: Optional[torch.FloatTensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
@@ -603,7 +606,7 @@ class llmModel(llmPreTrainedModel):
                 past_key_values = DynamicCache.from_legacy_cache(past_key_values)
             past_key_values_length = past_key_values.get_usable_length(seq_length)
 
-        if position_ids is None；
+        if position_ids is None:
             device = input_ids.device if input_ids is not None else inputs_embeds.device
             # 生成一个从 past_key_values_length 到 seq_length + past_key_values_length 的整数序列
             position_ids = torch.arange(
@@ -773,7 +776,7 @@ class llmForCausalLM(llmPreTrainedModel):
             # 这样使得模型预测的是当前时刻 t 的下一个词，而非当前词本身
             shift_logits = logits[..., :-1, :].contiguous()
             # 同时，也需要将真实标签（labels）向前移动一位以与调整后的logits对齐
-            shift_labels = logits[..., 1:].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
             # Flatten the tokens
             loss_fct = CrossEntropyLoss(ignore_index = -100)
 
@@ -914,11 +917,11 @@ class llmForCausalLM(llmPreTrainedModel):
         return response
 
     def chat(
-        self
+        self,
         tokenizer,
         messages: List[dict],
         system: str = "你是由 wanggroup 开发的个人助手。",
-        stream: False,
+        stream = False,
         use_pot = False,
         generation_config: Optional[GenerationConfig] = None
     ):

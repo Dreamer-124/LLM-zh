@@ -29,13 +29,13 @@ def make_context(
             messages = messages[1:]
         ## query
         ### 确保最后一项是用户消息
-        assert messages[-1]["role"] = "user"
+        assert messages[-1]["role"] == "user"
         query = message[-1]["content"]
         messages = messages[:-1]
         # history
         assert len(messages) % 2 == 0
         for i in range(0, len(messages), 2):
-            assert messages[i]["role"] == "user" and messages[i + 1]["role"] = "assistant"
+            assert messages[i]["role"] == "user" and messages[i + 1]["role"] == "assistant"
             history.append([messages[i]["content"], messages[i + 1]["content"]])
 
         return system, query, history
@@ -175,10 +175,10 @@ def parse_pot_no_stream(inputs):
                         s[c] = s[c].replace(var[0], str(ans))
             except:
                 return inputs
-        except Exception as e:
-            return inputs
-        
+    except Exception as e:
         return inputs
+    
+    return inputs
 
 
 class TextIterStreamer:
@@ -232,7 +232,7 @@ class TextIterStreamer:
             return value
     
 
-class OutputRepetitionPenaltyLogitsProcessor
+class OutputRepetitionPenaltyLogitsProcessor(LogitsProcessor):
     """
     [`OutputLogitsProcessor`] that prevents the repetition of previous tokens through a penalty. This penalty is applied at
     most once per token. Note that, for decoder-only models like most LLMs, the considered tokens include the prompt.
