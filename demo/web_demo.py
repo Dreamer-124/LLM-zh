@@ -44,11 +44,13 @@ def init_chat_messages():
     
     return st.session_state.messages
 
+
 max_new_tokens = st.sidebar.slider("max new token", 0, 1024, 512, step = 1)
 top_p = st.sidebar.slider("top_p", 0.0, 1.0, 0.8, step=0.01)
 top_k = st.sidebar.slider("top_k", 0, 100, 0, step=1)
 temperature = st.sidebar.slider("temperature", 0.0, 2.0, 1.0, step=0.01)
 do_sample = st.sidebar.checkbox("do_sample", value=True)
+
 
 def main():
     model, tokenizer, generation_config = load_model_tokenizer()
